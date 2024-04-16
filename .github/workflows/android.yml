@@ -1,0 +1,45 @@
+name: Test workflow restrictions on forks
+
+on:
+  push:
+  pull_request:
+
+env:
+  is_job_restricted: ${{ (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.base.repo.id == github.event.pull_request.head.repo.id)) && 'true' || 'false' }}
+
+jobs:
+  selective:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: "debug"
+      run: |
+        # github.event_name: ${{ github.event_name }}
+        # github.event.pull_request.base.repo.id: ${{ github.event.pull_request.base.repo.id }}
+        # github.event.pull_request.head.repo.id: ${{ github.event.pull_request.head.repo.id }}
+        # github.env.is_job_restricted: ${{ github.env.is_job_restricted }}
+        # env.is_job_restricted: ${{ env.is_job_restricted }}
+        # bash: is_job_restricted: ${is_job_restricted}
+
+    - name: "simple action: must be executed on all WF kind"
+      run: echo "I must be executed on all WF kind"
+
+    - name: "only on PR from same repo: ${{ github.repository }}"
+      if: env.is_job_restricted == 'true'
+      run: echo "I must be executed only on repo ${{ github.repository }}"
+
+  global:
+    runs-on: ubuntu-latest
+    # env context is not available here, we have to use the full expressions
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.base.repo.id == github.event.pull_request.head.repo.id)
+
+    steps:
+    - name: "only on PR from same repo: ${{ github.repository }}"
+      run: echo "I must be executed only on repo ${{ github.repository }}"
+
+  no-restriction:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: "simple action: must be executed on all WF kind"
+      run: echo "I must be executed on all WF kind"
